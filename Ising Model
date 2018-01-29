@@ -1,3 +1,4 @@
+from __future__ import division
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -12,3 +13,105 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math as math
 import random
+import copy 
+import scipy.constants as con
+
+k_b = con.Boltzmann
+H = 0
+J = 1
+T = 1
+N = 100
+temp = np.linspace(0, 5, 1000)
+STEPS = 1000
+TNR = {'fontname' : 'Times New Roman'}
+plt.rc('axes', labelsize = 10)
+k = k_b * temp
+
+#generates a random spin matrix
+'''def Neutral_State():
+    g = (2*np.random.randint(2, size = (N, N)))-1
+    return g'''
+
+#this version of the lattice worked better
+def Neutral_State():
+    lattice = np.random.choice([-1, 1], [N, N])
+    return lattice
+
+lattice = np.copy(Neutral_State())#easier to type
+
+
+def Magnetisation(lattice, N, T):
+    M = abs(np.sum(lattice)) #total mag
+    M = M/(N*N)
+    return M
+#print ('Magnetisation =', Magnetisation(lattice, N))
+
+def Energy(S0, sn):
+    return (2*S0*(H+J*sn))
+#chooses random particle in Neutral state and the 4 surrounding it
+#if  deltaE < 0, entire lattice is flipped
+#similarly, if deltaE > 0, lattice to be flipped if randomly generated number < e^(deltaE/Temp)
+def Ising(lattice, N, T):
+    x = np.random.randint(0, N)
+    y = np.random.randint(0, N)
+    sn = lattice[(x+1)%N, y] + lattice[x, (y+1)%N] + lattice[(x-1)%N, y] + lattice[x, (y-1)%N]
+    S0 = lattice[x, y]
+    dE = Energy(S0, sn)
+    if dE < 0:
+        lattice[x,y] *= -1 
+    elif np.random.random() < np.exp(-dE/T):
+        lattice[x,y] *= -1 
+    return lattice
+
+#print (np.sum(Ising(lattice, N, T)))
+#gives Hamiltonaian for lattice
+def Hamiltonian(lattice, N):
+    HEn = 0
+    for x in range(len(lattice)):
+        for y in range(len(lattice)):
+            sn = lattice[(x+1)%N, y] + lattice[x, (y+1)%N] + lattice[(x-1)%N, y] + lattice[x, (y-1)%N]
+            S0 = lattice[x, y]
+            HEn += -S0*(H+J*sn)/2 #sums Ham. for all parts
+    return HEn/(N*N) #ave. Ham
+
+
+energy = Hamiltonian(lattice, N)
+energy = []
+
+for t in temp:
+    for i in range(STEPS):
+        Ising(lattice, N, T)
+    average_energy = Hamiltonian(lattice, N)
+    energy.append(average_energy)
+
+
+
+
+#print ('Hamiltonian =', Hamiltonian(lattice, N))
+
+#plt.imshow(lattice)
+#plt.title('Updated Configuration T = 0.5', TNR)
+plt.plot(temp, energy)
+
+
+mag = []
+for t in temp:
+    print (t)
+    Mag=0
+    for _ in range (STEPS):    
+        lattice=Ising(lattice, N, t)
+    for _ in range (int(STEPS/2)):
+        lattice=Ising(lattice, N, t)
+        Mag+=Magnetisation(lattice, N, t)
+    mag.append(Mag/(STEPS/2))
+    #print (magno)
+
+
+#a plot of number of steps taken vs. average magnetism per spin
+#plt.plot(stepz, mag, 'g')
+#plt.plot(temp, mag, 'r')
+plt.xlabel('Temperature', TNR)
+plt.ylabel('Average Magnetisation', TNR)
+plt.title('Temperature vs. Average Magnetisation', TNR)
+
+#plt.plot(temp,energy)
